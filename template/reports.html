@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Reports</h1>
+<div style="margin-bottom:14px"><a href="/reports/eod" class="btn-secondary btn-sm">📅 Day-to-Day / End-of-Day Report</a></div>
+
+<div class="grid grid-3">
+  <div class="card">
+    <div class="stat-label">This Month Revenue</div>
+    <div class="stat-value text-green">${{ "%.2f"|format(month_revenue) }}</div>
+    <div class="text-muted" style="font-size:12px">
+      {{ month_invoice_count }} invoices
+      {% if revenue_trend_pct is not none %}
+        <span style="font-weight:700;color:{{ 'var(--green)' if revenue_trend_pct>=0 else 'var(--red)' }}">
+          {{ '▲' if revenue_trend_pct>=0 else '▼' }} {{ revenue_trend_pct|abs }}% vs last month
+        </span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Tax Collected (This Month)</div>
+    <div class="stat-value" style="color:#fbbf24">${{ "%.2f"|format(month_tax) }}</div>
+  </div>
+  <div class="card">
+    <div class="stat-label">Gross Profit (All Time)</div>
+    <div class="stat-value text-green">${{ "%.2f"|format(profit) }}</div>
+    <div class="text-muted" style="font-size:12px">Revenue minus product cost</div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Revenue by Category</h2>
+    <table>
+      <thead><tr><th>Category</th><th class="text-right">Revenue</th></tr></thead>
+      <tbody>
+        {% for cat, rev in by_category %}
+        <tr><td>{{ cat }}</td><td class="text-right">${{ "%.2f"|format(rev) }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="text-muted">No sales yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Revenue by Payment Method</h2>
+    <table>
+      <thead><tr><th>Method</th><th class="text-right">Revenue</th></tr></thead>
+      <tbody>
+        {% for method, rev in by_payment %}
+        <tr><td>{{ method }}</td><td class="text-right">${{ "%.2f"|format(rev) }}</td></tr>
+        {% else %}
+        <tr><td colspan="2" class="text-muted">No sales yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Top Products (by units sold)</h2>
+  <table>
+    <thead><tr><th>Product</th><th class="text-right">Units Sold</th><th class="text-right">Revenue</th></tr></thead>
+    <tbody>
+      {% for p in top_products %}
+      <tr><td>{{ p.name }}</td><td class="text-right">{{ p.qty }}</td><td class="text-right">${{ "%.2f"|format(p.rev) }}</td></tr>
+      {% else %}
+      <tr><td colspan="3" class="text-muted">No product sales yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

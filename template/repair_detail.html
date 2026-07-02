@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Ticket #{{ repair.ticket_no }} — {{ repair.device }}</h1>
+{% if flash %}
+<div class="card" style="border-color:{{ 'var(--green)' if flash[0]=='green' else 'var(--red)' }}">{{ flash[1] }}</div>
+{% endif %}
+
+<div class="card">
+  {% for s in status_order %}
+  <span class="pipeline-step {{ 'done' if loop.index0 < cur_idx else 'active' if loop.index0==cur_idx else '' }}">{{ status_labels[s] }}</span>
+  {% endfor %}
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Details</h2>
+    <div class="total-row"><span>Customer</span><span>{{ repair.customer.name if repair.customer else '—' }} ({{ repair.customer.phone if repair.customer }})</span></div>
+    <div class="total-row"><span>Issue</span><span>{{ repair.issue }}</span></div>
+    <div class="total-row"><span>Description</span><span>{{ repair.description or '—' }}</span></div>
+    <div class="total-row"><span>Technician</span><span>{{ repair.technician.name if repair.technician else 'Unassigned' }}</span></div>
+    <div class="total-row"><span>Promised By</span><span>{{ repair.promised_by or '—' }}</span></div>
+    <div class="total-row"><span>Warranty</span><span>{{ repair.warranty_days }} days</span></div>
+    <div class="total-row"><span>Status</span><span><span class="badge {{ status_badge[repair.status] }}">{{ status_labels[repair.status] }}</span></span></div>
+
+    {% if next_status %}
+    <form method="post" action="/repairs/{{ repair.id }}/advance" style="margin-top:12px">
+      <input name="note" placeholder="Optional note" style="width:100%;margin-bottom:6px">
+      <button class="btn-primary" style="width:100%">→ Move to: {{ status_labels[next_status] }}</button>
+    </form>
+    {% else %}
+    <div class="badge badge-gray" style="margin-top:12px">Terminal status</div>
+    {% endif %}
+
+    {% if repair.status=='READY' %}
+    <form method="post" action="/repairs/{{ repair.id }}/notify" style="margin-top:8px">
+      <button class="btn-secondary" style="width:100%">📱 Send Ready-for-Pickup SMS</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Costs</h2>
+    <form method="post" action="/repairs/{{ repair.id }}/cost">
+      <div class="form-group"><label>Estimated Cost</label><input name="estimated_cost" type="number" step="0.01" value="{{ repair.estimated_cost or '' }}"></div>
+      <div class="form-group"><label>Final Cost</label><input name="final_cost" type="number" step="0.01" value="{{ repair.final_cost or '' }}"></div>
+      <button class="btn-secondary">Save Costs</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Status History</h2>
+  {% for h in history %}
+  <div class="total-row">
+    <span><span class="badge {{ status_badge[h.status] }}">{{ status_labels[h.status] }}</span> {{ h.note }}</span>
+    <span class="text-muted">{{ h.date[:16] }}</span>
+  </div>
+  {% endfor %}
+</div>
+<a href="/repairs">&larr; Back to repairs</a>
+{% endblock %}

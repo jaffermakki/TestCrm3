@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pos-layout">
+  <div class="pos-products">
+    <h1>Point of Sale</h1>
+    <form method="post" action="/pos/scan" style="margin-bottom:10px">
+      <input name="sku" placeholder="Scan barcode or type SKU — press Enter" autofocus style="width:100%;font-size:14px;padding:10px">
+    </form>
+    {% if scan_error %}<div class="text-red" style="font-size:12px;margin-bottom:10px">{{ scan_error }}</div>{% endif %}
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <select id="pos-cat-filter" onchange="filterProducts()" style="flex:1">
+        <option value="">All Categories</option>
+        {% for key, label in category_labels.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select id="pos-brand-filter" onchange="filterProducts()" style="flex:1">
+        <option value="">All Brands</option>
+        {% for b in all_brands %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="grid grid-3" id="pos-product-grid">
+      {% for p in products %}
+      <form method="post" action="/pos/add/{{ p.id }}" class="product-tile" data-category="{{ p.category }}" data-brand="{{ p.subcategory }}" onsubmit="this.querySelector('button').disabled=true">
+        <strong>{{ p.name }}</strong>
+        <span class="text-muted" style="font-size:12px">{{ p.sku }} · stock {{ p.stock }}</span>
+        {% if p.subcategory %}<span class="text-muted" style="font-size:11px;color:var(--accent)">{{ p.subcategory }}</span>{% endif %}
+        <span class="text-green" style="font-weight:700">${{ "%.2f"|format(p.price) }}</span>
+        <button type="submit" class="btn-secondary btn-sm" {% if p.stock<=0 %}disabled{% endif %}>+ Add</button>
+      </form>
+      {% endfor %}
+    </div>
+  </div>
+  <script>
+  function filterProducts(){
+    const cat = document.getElementById('pos-cat-filter').value;
+    const brand = document.getElementById('pos-brand-filter').value;
+    document.querySelectorAll('#pos-product-grid .product-tile').forEach(tile => {
+      const matchCat = !cat || tile.dataset.category === cat;
+      const matchBrand = !brand || tile.dataset.brand === brand;
+      tile.style.display = (matchCat && matchBrand) ? '' : 'none';
+    });
+  }
+  </script>
+
+  <div class="pos-cart">
+    <h2>Cart</h2>
+
+    <form method="post" action="/pos/customer" style="margin-bottom:10px">
+      <select name="customer_id" onchange="this.form.submit()">
+        <option value="">Walk-in customer</option>
+        {% for c in customers %}
+        <option value="{{ c.id }}" {% if c.id==customer_id %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    {% if selected_customer %}
+    <div class="card" style="padding:10px;margin-bottom:10px">
+      <div style="display:flex;gap:12px;font-size:12px;margin-bottom:8px">
+        <span>🏆 <strong>{{ selected_customer.points }}</strong> pts (≈${{ "%.2f"|format(selected_customer.points / points_redeem_rate) }})</span>
+        <span>🏷️ <strong>${{ "%.2f"|format(selected_customer.store_credit) }}</strong> credit</span>
+      </div>
+      <div class="form-row">
+        <form method="post" action="/pos/redeem-points" style="flex:1;display:flex;gap:4px">
+          <input type="number" name="points" min="{{ points_redeem_rate|int }}" step="{{ points_redeem_rate|int }}"
+            placeholder="Points" style="width:100%" {% if selected_customer.points < points_redeem_rate %}disabled{% endif %}>
+          <button class="btn-secondary btn-sm" {% if selected_customer.points < points_redeem_rate %}disabled{% endif %}>Redeem</button>
+        </form>
+        <form method="post" action="/pos/redeem-credit" style="flex:1;display:flex;gap:4px">
+          <input type="number" name="amount" min="0.01" step="0.01" max="{{ selected_customer.store_credit }}"
+            placeholder="Credit $" style="width:100%" {% if selected_customer.store_credit <= 0 %}disabled{% endif %}>
+          <button class="btn-secondary btn-sm" {% if selected_customer.store_credit <= 0 %}disabled{% endif %}>Apply</button>
+        </form>
+      </div>
+      {% if loyalty_discount>0 %}<div class="hint" style="text-align:left">✓ ${{ "%.2f"|format(loyalty_discount) }} loyalty discount applied</div>{% endif %}
+      {% if store_credit_used>0 %}<div class="hint" style="text-align:left">✓ ${{ "%.2f"|format(store_credit_used) }} store credit applied</div>{% endif %}
+    </div>
+    {% endif %}
+
+    <div style="flex:1;overflow-y:auto">
+      {% for item in cart %}
+      <div class="cart-row">
+        <span style="flex:1">{{ item.name }}</span>
+        <span style="display:flex;gap:4px;align-items:center">
+          <form method="post" action="/pos/qty/{{ loop.index0 }}" style="display:flex;gap:2px;align-items:center">
+            <button name="qty" value="{{ item.qty - 1 }}" class="btn-secondary btn-sm" style="width:24px;padding:2px" title="Decrease">−</button>
+            <span style="min-width:22px;text-align:center;font-size:13px;font-weight:700">{{ item.qty }}</span>
+            <button name="qty" value="{{ item.qty + 1 }}" class="btn-secondary btn-sm" style="width:24px;padding:2px" title="Increase">+</button>
+          </form>
+          <span style="min-width:52px;text-align:right;font-size:13px">${{ "%.2f"|format(item.price * item.qty) }}</span>
+          <form method="post" action="/pos/remove/{{ loop.index0 }}">
+            <button class="btn-secondary btn-sm" style="color:var(--red)" title="Remove">✕</button>
+          </form>
+        </span>
+      </div>
+      {% else %}
+      <p class="text-muted" style="font-size:13px">Cart is empty — tap a product to add it.</p>
+      {% endfor %}
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <div class="total-row" style="align-items:center">
+        <span>Subtotal (before tax)</span>
+        <form method="post" action="/pos/subtotal" style="margin:0">
+          <input type="number" name="value" step="0.01" min="0" value="{{ '%.2f'|format(sub) }}"
+            style="width:90px;text-align:right;font-weight:700"
+            onchange="this.form.submit()">
+        </form>
+      </div>
+
+      <div class="total-row" style="align-items:center">
+        <span style="display:flex;align-items:center;gap:6px">
+          Discount
+          <span class="disc-toggle">
+            <a href="#" onclick="setMode('$');return false" class="{{ 'active' if disc_mode=='$' }}" id="mode-dollar" style="padding:2px 7px">$</a>
+            <a href="#" onclick="setMode('%');return false" class="{{ 'active' if disc_mode=='%' }}" id="mode-percent" style="padding:2px 7px">%</a>
+          </span>
+        </span>
+        <form method="post" action="/pos/discount" id="disc-form" style="margin:0">
+          <input type="hidden" name="mode" id="disc-mode-field" value="{{ disc_mode }}">
+          <input type="number" name="value" min="0" step="0.01" value="{{ disc_raw }}"
+            style="width:80px;text-align:right" onchange="this.form.submit()">
+        </form>
+      </div>
+      {% if disc_mode=='%' and disc_raw>0 %}
+      <div class="hint">= ${{ "%.2f"|format(disc) }} off</div>
+      {% endif %}
+
+      {% if disc>0 %}
+      <div class="total-row" style="color:var(--green)"><span>Discount</span><span>−${{ "%.2f"|format(disc) }}</span></div>
+      {% endif %}
+      {% for line in tax.lines %}
+      <div class="total-row"><span>{{ line.label }}</span><span>${{ "%.2f"|format(line.amount) }}</span></div>
+      {% endfor %}
+      <div class="total-row grand"><span>Total</span><span>${{ "%.2f"|format(total) }}</span></div>
+    </div>
+
+    <div class="form-row" style="margin-top:10px">
+      <form method="post" action="/pos/clear" style="flex:1">
+        <button class="btn-secondary" style="width:100%">Clear Cart</button>
+      </form>
+      <form method="post" action="/pos/hold" style="flex:1;display:flex;gap:4px">
+        <input name="name" placeholder="Name (optional)" style="width:100%">
+        <button class="btn-secondary" {% if not cart %}disabled{% endif %}>Hold</button>
+      </form>
+    </div>
+
+    {% if held_carts %}
+    <div class="card" style="margin-top:8px;padding:10px">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Held Carts</div>
+      {% for h in held_carts %}
+      <div class="total-row" style="align-items:center">
+        <span>{{ h.name }}</span>
+        <span style="display:flex;gap:4px">
+          <form method="post" action="/pos/recall/{{ h.id }}"><button class="btn-secondary btn-sm">Recall</button></form>
+          <form method="post" action="/pos/held/{{ h.id }}/delete" onsubmit="return confirm('Delete this held cart?')"><button class="btn-secondary btn-sm">✕</button></form>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/pos/checkout" style="margin-top:8px" id="checkout-form">
+      <select name="payment_method" id="payment-method" style="width:100%;margin-bottom:8px" onchange="toggleTendered()">
+        <option>Cash</option><option>Credit Card</option><option>E-Transfer</option><option>Store Credit</option>
+      </select>
+      <div id="tendered-row" class="form-row" style="margin-bottom:8px">
+        <input type="number" name="tendered" id="tendered-input" step="0.01" min="0" placeholder="Cash tendered" style="width:100%" oninput="updateChange()">
+        <span id="change-display" style="display:flex;align-items:center;font-size:13px;white-space:nowrap;padding:0 6px">Change: $0.00</span>
+      </div>
+      <button class="btn-primary" style="width:100%;padding:12px" {% if not cart %}disabled{% endif %}>Complete Sale — ${{ "%.2f"|format(total) }}</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function setMode(mode){
+  document.getElementById('disc-mode-field').value = mode;
+  document.getElementById('disc-form').submit();
+}
+const TOTAL = {{ total }};
+function updateChange(){
+  const tendered = parseFloat(document.getElementById('tendered-input').value || 0);
+  const change = Math.max(0, tendered - TOTAL);
+  document.getElementById('change-display').textContent = 'Change: $' + change.toFixed(2);
+}
+function toggleTendered(){
+  const isCash = document.getElementById('payment-method').value === 'Cash';
+  document.getElementById('tendered-row').style.display = isCash ? 'flex' : 'none';
+}
+toggleTendered();
+</script>
+{% endblock %}

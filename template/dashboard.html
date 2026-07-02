@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+{% if backup_warning %}
+<div class="card" style="border-color:#fbbf24;display:flex;justify-content:space-between;align-items:center">
+  <span>💾 {{ backup_warning }} Export a backup to keep your data safe.</span>
+  <a href="/export/backup" class="btn-secondary btn-sm">Export Now</a>
+</div>
+{% endif %}
+<h1>{{ shop_name }} — Dashboard</h1>
+<div class="grid grid-3">
+  <div class="card"><div class="stat-label">Sales Today</div><div class="stat-value text-green">${{ "%.2f"|format(sales_today) }}</div></div>
+  <div class="card"><div class="stat-label">Invoices Today</div><div class="stat-value">{{ count_today }}</div></div>
+  <div class="card"><div class="stat-label">Low Stock Items</div><div class="stat-value text-red">{{ low_stock|length }}</div></div>
+</div>
+
+<div class="card">
+  <h2>Recent Invoices</h2>
+  <table>
+    <thead><tr><th>#</th><th>Customer</th><th>Items</th><th>Total</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for inv in recent_invoices %}
+      <tr>
+        <td><a href="/invoices/{{ inv.id }}">{{ inv.number }}</a></td>
+        <td>{{ inv.customer.name if inv.customer else 'Walk-in' }}</td>
+        <td>{{ inv.lines|length }} item{{ 's' if inv.lines|length != 1 }}</td>
+        <td>${{ "%.2f"|format(inv.total) }}</td>
+        <td class="text-muted">{{ inv.date.strftime('%b %d, %H:%M') }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-muted">No sales yet — go to Point of Sale.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if low_stock %}
+<div class="card">
+  <h2>Low Stock <a href="/products/reorder" class="btn-secondary btn-sm" style="float:right;font-weight:400">View Reorder List →</a></h2>
+  <table>
+    <thead><tr><th>SKU</th><th>Name</th><th>Stock</th></tr></thead>
+    <tbody>
+      {% for p in low_stock %}
+      <tr><td class="text-muted">{{ p.sku }}</td><td>{{ p.name }}</td><td class="text-red">{{ p.stock }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

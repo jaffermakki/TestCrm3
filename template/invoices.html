@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Invoices</h1>
+<div class="card">
+<table>
+  <thead><tr><th>#</th><th>Customer</th><th>Payment</th><th>Total</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for inv in invoices %}
+    <tr>
+      <td><a href="/invoices/{{ inv.id }}">{{ inv.number }}</a></td>
+      <td>{{ inv.customer.name if inv.customer else 'Walk-in' }}</td>
+      <td>{{ inv.payment_method }}</td>
+      <td>${{ "%.2f"|format(inv.total) }}</td>
+      <td class="text-muted">{{ inv.date.strftime('%b %d, %H:%M') }}</td>
+      <td>{% if inv.refunded %}<span class="badge badge-red">Refunded</span>{% else %}<span class="badge badge-green">Paid</span>{% endif %}</td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <a href="/invoices/{{ inv.id }}/thermal" target="_blank" class="btn-secondary btn-sm" title="Print receipt">🖨️</a>
+        {% if inv.customer and inv.customer.email %}
+        <form method="post" action="/invoices/{{ inv.id }}/email">
+          <input type="hidden" name="to_email" value="{{ inv.customer.email }}">
+          <button class="btn-secondary btn-sm" title="Email receipt to {{ inv.customer.email }}">✉️</button>
+        </form>
+        {% endif %}
+        {% if inv.customer and inv.customer.phone %}
+        <form method="post" action="/invoices/{{ inv.id }}/sms">
+          <input type="hidden" name="to_phone" value="{{ inv.customer.phone }}">
+          <button class="btn-secondary btn-sm" title="SMS receipt to {{ inv.customer.phone }}">📱</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-muted">No invoices yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

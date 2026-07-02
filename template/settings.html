@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Settings</h1>
+
+{% if flash %}
+<div class="card" style="border-color:{{ 'var(--green)' if flash[0]=='green' else 'var(--red)' }}">{{ flash[1] }}</div>
+{% endif %}
+
+<div class="card" style="max-width:480px">
+  <form method="post" action="/settings">
+    <h2>Shop Info</h2>
+    <div class="form-group"><label>Shop Name</label><input name="shop_name" value="{{ settings.get('shop_name','') }}"></div>
+    <div class="form-group"><label>Address</label><input name="shop_address" value="{{ settings.get('shop_address','') }}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Phone</label><input name="shop_phone" value="{{ settings.get('shop_phone','') }}"></div>
+      <div class="form-group"><label>Email</label><input name="shop_email" value="{{ settings.get('shop_email','') }}"></div>
+    </div>
+    <div class="form-group"><label>Province (for tax)</label>
+      <select name="province">
+        {% for p in ['ON','BC','AB','SK','MB','QC','NB','NS','PE','NL'] %}
+        <option value="{{ p }}" {% if settings.get('province')==p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Invoice Number Prefix</label><input name="invoice_prefix" value="{{ settings.get('invoice_prefix','') }}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>GST/HST Registration #</label><input name="shop_gst" value="{{ settings.get('shop_gst','') }}" placeholder="123456789RT0001"></div>
+      <div class="form-group"><label>PST/QST Registration # (if applicable)</label><input name="shop_pst" value="{{ settings.get('shop_pst','') }}"></div>
+    </div>
+
+    <h2 style="margin-top:18px">Loyalty Program</h2>
+    <div class="form-row">
+      <div class="form-group"><label>Points Earned per $1 Spent</label><input name="points_per_dollar" type="number" step="0.1" value="{{ settings.get('points_per_dollar','1') }}"></div>
+      <div class="form-group"><label>Points Required per $1 Redeemed</label><input name="points_redeem_rate" type="number" step="1" value="{{ settings.get('points_redeem_rate','100') }}"></div>
+    </div>
+
+    <h2 style="margin-top:18px">Notifications (Email &amp; SMS)</h2>
+    <p class="text-muted" style="font-size:12px">Both send directly from this server — no proxy/Worker needed, since credentials never have to reach a browser.</p>
+    <div style="font-size:12px;color:var(--text2);font-weight:700;margin:8px 0 4px">Email (SMTP)</div>
+    <div class="form-row">
+      <div class="form-group"><label>SMTP Host</label><input name="smtp_host" value="{{ settings.get('smtp_host','') }}" placeholder="smtp.gmail.com"></div>
+      <div class="form-group"><label>Port</label><input name="smtp_port" value="{{ settings.get('smtp_port','587') }}"></div>
+    </div>
+    <div class="form-group"><label>SMTP Username</label><input name="smtp_user" value="{{ settings.get('smtp_user','') }}"></div>
+    <div class="form-group"><label>SMTP Password {% if settings.get('smtp_password') %}<span class="text-muted">(set — leave blank to keep)</span>{% endif %}</label><input name="smtp_password" type="password" placeholder="••••••••"></div>
+    <div class="form-group"><label>From Address</label><input name="smtp_from" value="{{ settings.get('smtp_from','') }}" placeholder="receipts@yourshop.com"></div>
+    <p class="text-muted" style="font-size:11px;margin-top:-6px;margin-bottom:10px">⚠️ Leave this blank, or set it to the exact same address as SMTP Username above. A From Address on a different domain gets silently dropped by most mail providers (Gmail, Outlook, etc.) even though sending appears to succeed. <strong>For Brevo: this address must also be a verified sender in your Brevo account (Senders &amp; IPs → Senders).</strong></p>
+    <div style="margin-bottom:12px"><a href="/settings/smtp-diagnose" class="btn-secondary btn-sm">🔍 Run SMTP Diagnostic (step-by-step)</a></div>
+
+    <div style="font-size:12px;color:var(--text2);font-weight:700;margin:14px 0 4px">SMS (Twilio)</div>
+    <div class="form-group"><label>Account SID</label><input name="twilio_sid" value="{{ settings.get('twilio_sid','') }}" placeholder="ACxxxxxxxx" style="font-family:var(--mono);font-size:12px"></div>
+    <div class="form-group"><label>Auth Token {% if settings.get('twilio_token') %}<span class="text-muted">(set — leave blank to keep)</span>{% endif %}</label><input name="twilio_token" type="password" placeholder="••••••••"></div>
+    <div class="form-group"><label>From Phone Number</label><input name="twilio_from" value="{{ settings.get('twilio_from','') }}" placeholder="+14165550100"></div>
+
+    <h2 style="margin-top:18px">Daily Owner Digest</h2>
+    <p class="text-muted" style="font-size:12px">A nightly email summarizing revenue, repairs opened/closed, low stock, and cash-up status. Requires SMTP to be configured above.</p>
+    <div class="form-group" style="flex-direction:row;align-items:center;gap:8px">
+      <input type="checkbox" name="digest_enabled" id="digest_enabled" style="width:auto" {% if settings.get('digest_enabled')=='true' %}checked{% endif %}>
+      <label for="digest_enabled" style="margin:0">Send the digest automatically every night</label>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Send To</label><input name="digest_email" type="email" value="{{ settings.get('digest_email','') }}" placeholder="owner@yourshop.com"></div>
+      <div class="form-group"><label>Send At (24h, server time)</label>
+        <select name="digest_hour">
+          {% for h in range(24) %}<option value="{{ h }}" {% if settings.get('digest_hour','21')|int==h %}selected{% endif %}>{{ '%02d:00'|format(h) }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-primary" style="margin-top:8px">Save All Settings</button>
+  </form>
+</div>
+
+<div class="card" style="max-width:480px">
+  <h2>Send Test Email</h2>
+  <p class="text-muted" style="font-size:12px">Sends a simple test message to confirm your SMTP settings actually deliver — do this before relying on receipts or the daily digest.</p>
+  <form method="post" action="/settings/send-test-email" style="display:flex;gap:6px">
+    <input name="to_email" type="email" placeholder="your-email@example.com" required>
+    <button class="btn-secondary">📧 Send Test Email</button>
+  </form>
+</div>
+
+<div class="card" style="max-width:480px">
+  <h2>Send Test Digest</h2>
+  <p class="text-muted" style="font-size:12px">Sends today's digest right now, using whatever's currently saved — handy for checking it works before relying on the nightly schedule.</p>
+  <form method="post" action="/settings/send-test-digest">
+    <button class="btn-secondary">📧 Send Test Digest Now</button>
+  </form>
+</div>
+
+<div class="card" style="max-width:480px">
+  <h2>Data Export</h2>
+  <p class="text-muted" style="font-size:12px">Your data lives in one SQLite file (<code>crm.db</code>) — the simplest backup is copying that file. These exports are for spreadsheets, accounting, or moving data elsewhere.</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <a href="/export/csv/inventory" class="btn-secondary btn-sm">Inventory CSV</a>
+    <a href="/export/csv/customers" class="btn-secondary btn-sm">Customers CSV</a>
+    <a href="/export/csv/invoices" class="btn-secondary btn-sm">Invoices CSV</a>
+    <a href="/export/csv/tax-report" class="btn-secondary btn-sm">Tax Report CSV</a>
+    <a href="/export/csv/reorder" class="btn-secondary btn-sm">Reorder List CSV</a>
+  </div>
+  <a href="/export/backup" class="btn-primary btn-sm">⬇ Download Full Backup (JSON)</a>
+</div>
+
+<div class="card" style="max-width:480px">
+  <h2>Restore from Backup</h2>
+  <p class="text-muted" style="font-size:12px">Replaces products, customers, repairs, and settings with the contents of the backup file. Sales history (invoices) is left untouched. Staff PINs are not included in backups and must be re-set after a restore.</p>
+  <form method="post" action="/import/backup" enctype="multipart/form-data" onsubmit="return confirm('This will replace your current products, customers, repairs, and settings. Continue?')">
+    <input type="file" name="file" accept="application/json" required style="margin-bottom:8px">
+    <button class="btn-secondary">Restore Backup</button>
+  </form>
+</div>
+
+<div class="card" style="max-width:480px;border-color:var(--red)">
+  <h2 class="text-red">Danger Zone</h2>
+  <p class="text-muted" style="font-size:12px">Permanently deletes all products, customers, repairs, invoices, held carts, and cash-up history. Staff accounts, settings, and the audit log are kept. This cannot be undone.</p>
+  <form method="post" action="/settings/danger/wipe" onsubmit="return confirm('Are you absolutely sure? This permanently deletes your shop data.')">
+    <div class="form-group"><label>Type "delete everything" to confirm</label><input name="confirm_text" required></div>
+    <button class="btn-danger">Wipe All Data</button>
+  </form>
+</div>
+{% endblock %}

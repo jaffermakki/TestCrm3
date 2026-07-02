@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Audit Log</h1>
+<div class="card">
+  <table>
+    <thead><tr><th>Time</th><th>Staff</th><th>Action</th><th>Detail</th></tr></thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td class="text-muted">{{ log.ts.strftime('%b %d, %H:%M:%S') }}</td>
+        <td>{{ log.staff_name }}</td>
+        <td><span class="badge badge-gray">{{ log.action }}</span></td>
+        <td>{{ log.detail }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

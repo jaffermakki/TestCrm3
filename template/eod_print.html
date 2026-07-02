@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>{{ shop_name }} — {{ 'Day Report ' + single_day if single_day else 'End of Day Report ' + month }}</title>
+<style>
+  body { font-family: 'Inter', Arial, sans-serif; color: #2c2c2c; max-width: 800px; margin: 30px auto; padding: 0 20px; }
+  h1 { font-size: 20px; margin-bottom: 2px; color: #1e5c3a; }
+  .meta { font-size: 12px; color: #777; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12.5px; }
+  th { background: #1e5c3a; color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+  tr:nth-child(even) td { background: #f7f4ef; }
+  .day-block { margin-bottom: 22px; page-break-inside: avoid; }
+  .day-title { font-weight: 700; font-size: 14px; color: #1e3a28; margin-bottom: 6px; border-bottom: 2px solid #b8964a; padding-bottom: 4px; }
+  .grand { background: #f0f5f1; border: 1px solid #c8dece; border-radius: 8px; padding: 16px; margin-top: 20px; }
+  .grand-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+  .grand-row.total { font-weight: 700; font-size: 18px; color: #1e5c3a; border-top: 2px solid #b8964a; padding-top: 10px; margin-top: 6px; }
+  .text-right { text-align: right }
+  .no-print { margin-bottom: 16px; }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="no-print"><button onclick="window.print()" style="padding:8px 16px;font-size:14px;cursor:pointer">🖨️ Print</button></div>
+
+<h1>{{ shop_name }}</h1>
+<div class="meta">
+  {% if single_day %}Day Report — {{ single_day }}{% else %}End of Day Report — {{ month }}{% endif %}
+  · Generated {{ days|length }} day{{ 's' if days|length != 1 }} of data
+</div>
+
+{% for d in days %}
+<div class="day-block">
+  <div class="day-title">{{ d.date }} ({{ d.weekday }}) — {{ d.count }} transaction{{ 's' if d.count != 1 }}</div>
+  <table>
+    <thead><tr><th>Invoice #</th><th>Customer</th><th>Payment</th><th class="text-right">Subtotal</th><th class="text-right">Tax</th><th class="text-right">Total</th></tr></thead>
+    <tbody>
+      {% for inv in d.invoices %}
+      <tr>
+        <td>{{ inv.number }}</td>
+        <td>{{ inv.customer.name if inv.customer else 'Walk-in' }}</td>
+        <td>{{ inv.payment_method }}</td>
+        <td class="text-right">${{ "%.2f"|format(inv.subtotal) }}</td>
+        <td class="text-right">${{ "%.2f"|format(inv.tax_total) }}</td>
+        <td class="text-right">${{ "%.2f"|format(inv.total) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="text-align:right;font-size:13px;font-weight:700;color:#1e5c3a">Day Total: ${{ "%.2f"|format(d.total) }}</div>
+</div>
+{% else %}
+<p>No sales recorded for this period.</p>
+{% endfor %}
+
+<div class="grand">
+  <div class="grand-row"><span>Total Transactions</span><span>{{ grand_count }}</span></div>
+  <div class="grand-row"><span>Total Tax Collected</span><span>${{ "%.2f"|format(grand_tax) }}</span></div>
+  <div class="grand-row total"><span>Grand Total Revenue</span><span>${{ "%.2f"|format(grand_revenue) }}</span></div>
+</div>
+</body>
+</html>

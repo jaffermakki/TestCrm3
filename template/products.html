@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Products</h1>
+<div style="margin-bottom:14px"><a href="/products/reorder" class="btn-secondary btn-sm">📋 Low Stock Reorder List</a></div>
+
+{% if flash %}
+<div class="card" style="border-color:{{ 'var(--green)' if flash[0]=='green' else '#fbbf24' if flash[0]=='amber' else 'var(--red)' }}">{{ flash[1] }}</div>
+{% endif %}
+
+{% if staff.role in ['owner','manager'] %}
+<div class="card">
+  <h2>Bulk Import (CSV)</h2>
+  <p class="text-muted" style="font-size:12px">Columns: <code>SKU, Name, Category, Brand, Price, Cost, Stock</code> — same format as the Inventory CSV export, so you can export, edit in a spreadsheet, and re-import. Existing SKUs are skipped, not overwritten.</p>
+  <form method="post" action="/products/import" enctype="multipart/form-data" style="display:flex;gap:8px">
+    <input type="file" name="file" accept=".csv" required>
+    <button class="btn-secondary">Import</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Add Product</h2>
+  <form method="post" action="/products/add" class="form-row" style="align-items:flex-end;flex-wrap:wrap">
+    <div class="form-group"><label>SKU</label><input name="sku" required></div>
+    <div class="form-group"><label>Name</label><input name="name" required></div>
+    <div class="form-group"><label>Category</label>
+      <select name="category" id="ap-category" onchange="updateBrandOptions('ap-category','ap-brand')">
+        {% for key, label in category_labels.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Brand</label>
+      <select name="subcategory" id="ap-brand"></select>
+    </div>
+    <div class="form-group"><label>Price</label><input name="price" type="number" step="0.01" value="0"></div>
+    <div class="form-group"><label>Cost</label><input name="cost" type="number" step="0.01" value="0"></div>
+    <div class="form-group"><label>Stock</label><input name="stock" type="number" value="0"></div>
+    <div class="form-group"><label>Reorder At</label><input name="reorder_threshold" type="number" value="5" title="Flag for reordering when stock drops to this level"></div>
+    <div class="form-group"><label>Reorder Qty</label><input name="reorder_qty" type="number" value="10" title="Suggested quantity to reorder"></div>
+    <button class="btn-primary">Add</button>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Brand</th><th>Price</th><th>Stock</th><th></th></tr></thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td class="text-muted">{{ p.sku }}</td>
+        <td>{{ p.name }}</td>
+        <td>{{ category_labels.get(p.category, p.category) }}</td>
+        <td class="text-muted">{{ p.subcategory or '—' }}</td>
+        <td>${{ "%.2f"|format(p.price) }}</td>
+        <td class="{{ 'text-red' if p.stock<=5 }}">{{ p.stock }}</td>
+        <td style="display:flex;gap:6px">
+          <a href="/products/{{ p.id }}/edit" class="btn-secondary btn-sm">Edit</a>
+          {% if staff.role in ['owner','manager'] %}
+          <form method="post" action="/products/{{ p.id }}/delete" onsubmit="return confirm('Delete {{ p.name }}?')">
+            <button class="btn-secondary btn-sm">Delete</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const CAT_SUBCATEGORIES = {{ cat_subcategories|tojson }};
+function updateBrandOptions(catSelectId, brandSelectId, selected){
+  const cat = document.getElementById(catSelectId).value;
+  const brandSelect = document.getElementById(brandSelectId);
+  const opts = CAT_SUBCATEGORIES[cat] || ['Generic'];
+  brandSelect.innerHTML = opts.map(b => `<option value="${b}" ${b===selected?'selected':''}>${b}</option>`).join('');
+}
+updateBrandOptions('ap-category','ap-brand');
+</script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Low Stock Reorder List</h1>
+
+<div class="grid grid-2">
+  <div class="card"><div class="stat-label">Items to Reorder</div><div class="stat-value text-red">{{ products|length }}</div></div>
+  <div class="card"><div class="stat-label">Estimated Reorder Cost</div><div class="stat-value">${{ "%.2f"|format(total_cost) }}</div></div>
+</div>
+
+<div style="margin-bottom:14px;display:flex;gap:8px">
+  <a href="/products/reorder/print" target="_blank" class="btn-primary btn-sm">🖨️ Print Reorder Sheet</a>
+  <a href="/export/csv/reorder" class="btn-secondary btn-sm">⬇ Export CSV</a>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>SKU</th><th>Name</th><th>Brand</th><th>Current Stock</th><th>Reorder At</th><th>Suggested Qty</th><th>Est. Cost</th></tr></thead>
+    <tbody>
+      {% for p in products %}
+      <tr>
+        <td class="text-muted">{{ p.sku }}</td>
+        <td>{{ p.name }}</td>
+        <td class="text-muted">{{ p.subcategory or '—' }}</td>
+        <td class="text-red" style="font-weight:700">{{ p.stock }}</td>
+        <td class="text-muted">{{ p.reorder_threshold }}</td>
+        <td>{{ p.reorder_qty }}</td>
+        <td>${{ "%.2f"|format(p.cost * p.reorder_qty) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-muted">Nothing needs reordering right now. 🎉</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<a href="/products">&larr; Back to products</a>
+{% endblock %}

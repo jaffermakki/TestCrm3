@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Repairs</h1>
+
+<div class="card">
+  <h2>New Repair Ticket</h2>
+  <form method="post" action="/repairs/add">
+    <div class="form-row">
+      <div class="form-group"><label>Customer Phone</label><input name="phone" required></div>
+      <div class="form-group"><label>Customer Name</label><input name="name" required></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Device Model</label><input name="device" placeholder="iPhone 13 Pro, Samsung S22…" required></div>
+      <div class="form-group"><label>Issue Type</label>
+        <select name="issue">
+          {% for it in issue_types %}<option>{{ it }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Description</label><textarea name="description" rows="2"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Estimated Cost</label><input name="estimated_cost" type="number" step="0.01" min="0"></div>
+      <div class="form-group"><label>Warranty (days)</label><input name="warranty_days" type="number" value="90"></div>
+      <div class="form-group"><label>Promised By</label><input name="promised_by" type="date"></div>
+      <div class="form-group"><label>Technician</label>
+        <select name="technician_id">
+          <option value="">Unassigned</option>
+          {% for t in technicians %}<option value="{{ t.id }}">{{ t.name }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary">Create Ticket</button>
+  </form>
+</div>
+
+<div class="form-row" style="margin-bottom:10px">
+  <a href="/repairs?view=kanban" class="btn-secondary btn-sm {{ 'btn-primary' if view=='kanban' }}">Kanban</a>
+  <a href="/repairs?view=table" class="btn-secondary btn-sm {{ 'btn-primary' if view=='table' }}">Table</a>
+</div>
+
+{% if view=='table' %}
+<div class="card">
+  <table>
+    <thead><tr><th>#</th><th>Customer</th><th>Device</th><th>Issue</th><th>Status</th><th>Promised</th><th>Actions</th></tr></thead>
+    <tbody>
+      {% for r in repairs %}
+      <tr>
+        <td><a href="/repairs/{{ r.id }}">#{{ r.ticket_no }}</a></td>
+        <td>{{ r.customer.name if r.customer else '—' }}</td>
+        <td>{{ r.device }}</td>
+        <td>{{ r.issue }}</td>
+        <td><span class="badge {{ status_badge[r.status] }}">{{ status_labels[r.status] }}</span></td>
+        <td class="text-muted">{{ r.promised_by }}</td>
+        <td style="display:flex;gap:4px">
+          <a href="/repairs/{{ r.id }}" class="btn-secondary btn-sm">Open</a>
+          {% if r.status == 'READY' %}
+          <form method="post" action="/repairs/{{ r.id }}/notify">
+            <button class="btn-secondary btn-sm" title="Send ready SMS">📱</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-muted">No repair tickets yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="kanban-board">
+  {% for status in status_order %}
+  <div class="kanban-col">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text2);margin-bottom:8px">
+      {{ status_labels[status] }} ({{ columns[status]|length }})
+    </div>
+    {% for r in columns[status] %}
+    <div class="kanban-card">
+      <a href="/repairs/{{ r.id }}">#{{ r.ticket_no }}</a>
+      <div>{{ r.device }}</div>
+      <div class="text-muted">{{ r.issue }}</div>
+      <div class="text-muted">{{ r.customer.name if r.customer else '—' }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

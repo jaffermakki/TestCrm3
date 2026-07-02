@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{% block title %}TechPro+ CRM{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% if staff %}
+<div class="layout">
+  <nav class="sidebar">
+    <div class="brand">🛠️ TechPro+ CRM</div>
+    <a href="/" class="{{ 'active' if request.url.path=='/' }}">Dashboard</a>
+    <a href="/pos" class="{{ 'active' if request.url.path=='/pos' }}">Point of Sale</a>
+    <a href="/repairs" class="{{ 'active' if request.url.path.startswith('/repairs') }}">Repairs</a>
+    <a href="/invoices" class="{{ 'active' if request.url.path.startswith('/invoices') }}">Invoices</a>
+    <a href="/reports" class="{{ 'active' if request.url.path=='/reports' }}">Reports</a>
+    <a href="/cashup" class="{{ 'active' if request.url.path=='/cashup' }}">Cash Up</a>
+    <a href="/products" class="{{ 'active' if request.url.path=='/products' }}">Products</a>
+    <a href="/customers" class="{{ 'active' if request.url.path.startswith('/customers') }}">Customers</a>
+    {% if staff.role in ['owner','manager'] %}
+    <a href="/staff" class="{{ 'active' if request.url.path=='/staff' }}">Staff</a>
+    <a href="/audit" class="{{ 'active' if request.url.path=='/audit' }}">Audit Log</a>
+    {% endif %}
+    {% if staff.role=='owner' %}
+    <a href="/settings" class="{{ 'active' if request.url.path=='/settings' }}">Settings</a>
+    {% endif %}
+    <div class="sidebar-footer">
+      <div class="staff-pill">{{ staff.name }} <span class="role-badge">{{ staff.role }}</span></div>
+      <a href="/logout" class="logout-link">Log out</a>
+    </div>
+  </nav>
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+{% block bare_content %}{% endblock %}
+{% endif %}
+</body>
+</html>

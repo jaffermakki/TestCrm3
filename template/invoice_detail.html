@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+/* ── Eco-elegant invoice — warm paper, forest green, gold hairline ── */
+/* Ported from the original CRM's printInvoice() design, scoped under #print-area */
+#print-area .inv-wrap {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  max-width: 720px; margin: 0 auto; padding: 48px 52px;
+  background: #fdfcf9; color: #2c2c2c; box-sizing: border-box;
+  border: 1px solid #e8e2d9;
+}
+#print-area .inv-wrap * { box-sizing: border-box }
+#print-area .inv-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 28px; padding-bottom: 22px; border-bottom: 2px solid #1e5c3a;
+}
+#print-area .inv-brand img { height: 42px; width: auto; object-fit: contain }
+#print-area .inv-brand-addr {
+  font-size: 11px; color: #7a7060; line-height: 1.8; margin-top: 8px;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#print-area .inv-brand-addr strong { color: #2c2c2c }
+#print-area .inv-number-block { text-align: right }
+#print-area .inv-number-block .label {
+  font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+  color: #1e5c3a; font-family: 'Inter', Arial, sans-serif; margin-bottom: 4px
+}
+#print-area .inv-number-block .number {
+  font-size: 26px; font-weight: 700; color: #1e5c3a;
+  letter-spacing: -0.5px; font-family: 'Georgia', serif;
+}
+#print-area .inv-number-block .meta {
+  font-size: 11px; color: #7a7060; margin-top: 8px; line-height: 1.8;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#print-area .inv-status-band {
+  background: #f0f5f1; border: 1px solid #c8dece; border-radius: 8px;
+  padding: 12px 20px; display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 24px;
+}
+#print-area .inv-status-band .s-item { text-align: center }
+#print-area .inv-status-band .s-label {
+  font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase;
+  color: #5a8a6a; display: block; margin-bottom: 3px;
+  font-family: 'Inter', Arial, sans-serif; font-weight: 600;
+}
+#print-area .inv-status-band .s-value {
+  font-size: 13px; font-weight: 700; color: #1e3a28;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#print-area .inv-billto {
+  background: #f8f5ee; border-left: 3px solid #1e5c3a;
+  border-radius: 0 6px 6px 0; padding: 13px 18px; margin-bottom: 22px;
+}
+#print-area .inv-billto .bt-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: #1e5c3a; margin-bottom: 5px; font-family: 'Inter', Arial, sans-serif;
+}
+#print-area .inv-billto .bt-name {
+  font-size: 15px; font-weight: 700; color: #1e3a28; font-family: 'Georgia', serif;
+}
+#print-area .inv-billto .bt-meta {
+  font-size: 11.5px; color: #7a7060; margin-top: 3px; font-family: 'Inter', Arial, sans-serif;
+}
+#print-area .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 8px }
+#print-area .inv-table thead tr { background: #1e5c3a; color: #fff; }
+#print-area .inv-table th {
+  padding: 10px 14px; text-align: left; font-size: 10px;
+  font-weight: 600; letter-spacing: .8px; text-transform: uppercase;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#print-area .inv-table th:last-child, #print-area .inv-table td:last-child { text-align: right }
+#print-area .inv-table td {
+  padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #ede8df;
+  font-family: 'Inter', Arial, sans-serif; color: #2c2c2c;
+}
+#print-area .inv-table tbody tr:nth-child(even) td { background: #f7f4ef }
+#print-area .inv-table tbody tr:last-child td { border-bottom: none }
+#print-area .inv-totals { display: flex; justify-content: flex-end; margin: 16px 0 24px }
+#print-area .inv-totals-inner { width: 280px }
+#print-area .tot-row {
+  display: flex; justify-content: space-between; padding: 5px 0;
+  font-size: 12.5px; color: #6b6456; border-bottom: 1px solid #ede8df;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#print-area .tot-row:last-child { border-bottom: none }
+#print-area .tot-row.grand {
+  font-size: 17px; font-weight: 700; color: #1e3a28;
+  border-top: 2px solid #b8964a; border-bottom: none;
+  padding-top: 12px; margin-top: 6px; font-family: 'Georgia', serif;
+}
+#print-area .tot-row .discount { color: #c0392b }
+#print-area .pay-badge {
+  display: inline-block; background: #e8f5ec; color: #1e5c3a;
+  border: 1px solid #b0d8bc; border-radius: 999px;
+  padding: 3px 12px; font-size: 11px; font-weight: 700;
+  font-family: 'Inter', Arial, sans-serif; letter-spacing: .3px;
+}
+#print-area .inv-tax-note {
+  background: #f5f0e8; border: 1px solid #e0d5c0; border-radius: 6px;
+  padding: 8px 13px; font-size: 11px; color: #7a6a50; margin-bottom: 16px;
+  font-family: 'Inter', Arial, sans-serif; line-height: 1.6;
+}
+#print-area .inv-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 18px; margin-top: 4px; border-top: 1px solid #c8dece;
+}
+#print-area .inv-footer-left { font-size: 12px; color: #5a8a6a; font-style: italic; font-family: 'Georgia', serif; }
+#print-area .inv-footer-right { font-size: 10.5px; color: #a89880; text-align: right; font-family: 'Inter', Arial, sans-serif; line-height: 1.7; }
+#print-area .inv-eco-note {
+  text-align: center; margin-top: 20px; padding-top: 14px; border-top: 1px dashed #d0c8b8;
+  font-size: 10px; color: #a0987a; font-family: 'Inter', Arial, sans-serif; letter-spacing: .3px;
+}
+@media print {
+  .sidebar, .no-print { display:none !important; }
+  .content { padding:0 !important; }
+  html, body { background: #fdfcf9 !important; }
+  #print-area .inv-wrap { -webkit-print-color-adjust: exact; print-color-adjust: exact; border:none; }
+}
+</style>
+
+<h1 class="no-print">Invoice {{ invoice.number }}</h1>
+{% if flash %}
+<div class="card no-print" style="border-color:{{ 'var(--green)' if flash[0]=='green' else 'var(--red)' }}">{{ flash[1] }}</div>
+{% endif %}
+
+<div id="print-area">
+  <div class="inv-wrap">
+    <div class="inv-header">
+      <div class="inv-brand">
+        <img src="/static/logo.jpg" alt="{{ shop.name }}"/>
+        <p class="inv-brand-addr">
+          <strong>{{ shop.name }}</strong><br/>
+          {{ shop.address }}<br/>
+          {% if shop.phone %}{{ shop.phone }}<br/>{% endif %}
+          {{ shop.email }}
+        </p>
+        {% if shop.gst %}<p style="font-size:11px;color:#555;margin-top:4px;font-family:'Inter',Arial,sans-serif"><strong>GST/HST#:</strong> {{ shop.gst }}</p>{% endif %}
+        {% if shop.pst %}<p style="font-size:11px;color:#555;font-family:'Inter',Arial,sans-serif"><strong>PST/QST#:</strong> {{ shop.pst }}</p>{% endif %}
+      </div>
+      <div class="inv-number-block">
+        <div class="label">Invoice</div>
+        <div class="number">{{ invoice.number }}</div>
+        <div class="meta">
+          Date: {{ invoice.date|datefmt('%B {d}, %Y') }}<br/>
+          {{ province_label }}
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-status-band">
+      <div class="s-item"><span class="s-label">Invoice #</span><span class="s-value">{{ invoice.number }}</span></div>
+      <div class="s-item"><span class="s-label">Date</span><span class="s-value">{{ invoice.date|datefmt('%b {d}, %Y') }}</span></div>
+      <div class="s-item"><span class="s-label">Payment</span><span class="s-value">{{ invoice.payment_method }}</span></div>
+      <div class="s-item"><span class="s-label">Total (CAD)</span><span class="s-value" style="color:#1e5c3a;font-size:16px;font-family:'Georgia',serif">${{ "%.2f"|format(invoice.total) }}</span></div>
+    </div>
+
+    <div class="inv-billto">
+      <div class="bt-label">Bill To</div>
+      <div class="bt-name">{{ invoice.customer.name if invoice.customer else 'Walk-in Customer' }}</div>
+      {% if invoice.customer and invoice.customer.phone %}<div class="bt-meta">📞 {{ invoice.customer.phone }}</div>{% endif %}
+    </div>
+
+    <table class="inv-table">
+      <thead>
+        <tr><th style="width:40%">Description</th><th>SKU</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Amount</th></tr>
+      </thead>
+      <tbody>
+        {% for l in invoice.lines %}
+        <tr>
+          <td style="font-weight:600">{{ l.name }}</td>
+          <td style="font-family:monospace;font-size:11px;color:#888">{{ l.sku or '—' }}</td>
+          <td style="text-align:center">{{ l.qty }}</td>
+          <td style="text-align:right">${{ "%.2f"|format(l.price) }}</td>
+          <td style="text-align:right;font-weight:700">${{ "%.2f"|format(l.price * l.qty) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if shop.gst %}
+    <div class="inv-tax-note">
+      🍁 This invoice includes applicable Canadian taxes. GST/HST Registration: <strong>{{ shop.gst }}</strong>
+      {% if shop.pst %} · PST/QST: <strong>{{ shop.pst }}</strong>{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="inv-totals">
+      <div class="inv-totals-inner">
+        <div class="tot-row"><span>Subtotal</span><span>${{ "%.2f"|format(invoice.subtotal) }}</span></div>
+        {% if invoice.discount>0 %}<div class="tot-row"><span>Discount</span><span class="discount">−${{ "%.2f"|format(invoice.discount) }}</span></div>{% endif %}
+        {% if invoice.loyalty_pts_used>0 %}<div class="tot-row"><span>Loyalty points redeemed</span><span class="discount">{{ invoice.loyalty_pts_used }} pts</span></div>{% endif %}
+        {% if invoice.store_credit_used>0 %}<div class="tot-row"><span>Store credit redeemed</span><span class="discount">−${{ "%.2f"|format(invoice.store_credit_used) }}</span></div>{% endif %}
+        {% for tl in tax_lines %}<div class="tot-row"><span>{{ tl.label }}</span><span>${{ "%.2f"|format(tl.amount) }}</span></div>{% endfor %}
+        <div class="tot-row grand"><span>Total (CAD)</span><span>${{ "%.2f"|format(invoice.total) }}</span></div>
+        <div class="tot-row" style="margin-top:10px"><span>Payment Method</span><span><span class="pay-badge">{{ invoice.payment_method }}</span></span></div>
+        {% if invoice.tendered>0 %}
+        <div class="tot-row"><span>Tendered</span><span>${{ "%.2f"|format(invoice.tendered) }}</span></div>
+        <div class="tot-row"><span>Change</span><span>${{ "%.2f"|format(invoice.change_given) }}</span></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="inv-footer">
+      <div class="inv-footer-left">Thank you for choosing {{ shop.name }}</div>
+      <div class="inv-footer-right">{{ invoice.number }} · {{ invoice.date|datefmt('%b {d}, %Y') }}<br/>Prices in CAD · Taxes per {{ province_label }}</div>
+    </div>
+    <div class="inv-eco-note">🌿 This invoice is designed to be printed minimally — consider saving digitally where possible</div>
+    {% if invoice.refunded %}<div style="text-align:center;margin-top:14px"><span class="badge badge-red" style="font-size:12px">REFUNDED</span></div>{% endif %}
+  </div>
+</div>
+
+<div class="no-print" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+  <button onclick="window.print()" class="btn-primary">🖨️ Print Invoice (A4)</button>
+  <a href="/invoices/{{ invoice.id }}/thermal" target="_blank" class="btn-secondary">🧾 Thermal Receipt</a>
+  <form method="post" action="/invoices/{{ invoice.id }}/email" style="display:flex;gap:6px">
+    <input name="to_email" type="email" placeholder="{{ invoice.customer.email if invoice.customer and invoice.customer.email else 'customer@email.com' }}" value="{{ invoice.customer.email if invoice.customer else '' }}">
+    <button class="btn-secondary">✉️ Email Receipt</button>
+  </form>
+  <form method="post" action="/invoices/{{ invoice.id }}/sms" style="display:flex;gap:6px">
+    <input name="to_phone" type="tel" placeholder="{{ invoice.customer.phone if invoice.customer and invoice.customer.phone else '555-0100' }}" value="{{ invoice.customer.phone if invoice.customer else '' }}">
+    <button class="btn-secondary">📱 SMS Receipt</button>
+  </form>
+  {% if can_refund and not invoice.refunded %}
+  <form method="post" action="/invoices/{{ invoice.id }}/refund" onsubmit="return confirm('Refund this invoice? This restocks items and cannot be undone.')">
+    <button class="btn-danger">Process Refund</button>
+  </form>
+  {% endif %}
+</div>
+<a href="/invoices" class="no-print">&larr; Back to invoices</a>
+{% endblock %}

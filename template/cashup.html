@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Cash Up</h1>
+
+{% if today_session %}
+<div class="card" style="border-color:var(--green)">
+  ✓ Today's cash-up was completed at {{ today_session.closed_at.strftime('%H:%M') }} by {{ today_session.closed_by_name }}
+  — difference: <span class="{{ 'text-green' if today_session.difference|abs < 0.01 else 'text-red' }}">{{ '%+.2f'|format(today_session.difference) }}</span>
+</div>
+{% endif %}
+
+<div class="grid grid-4">
+  <div class="card"><div class="stat-label">Total Sales Today</div><div class="stat-value text-green">${{ "%.2f"|format(total_sales) }}</div><div class="text-muted" style="font-size:12px">{{ invoice_count }} invoices</div></div>
+  <div class="card"><div class="stat-label">Cash Sales</div><div class="stat-value">${{ "%.2f"|format(cash_sales) }}</div></div>
+  <div class="card"><div class="stat-label">Card / Debit</div><div class="stat-value">${{ "%.2f"|format(card_sales) }}</div></div>
+  <div class="card"><div class="stat-label">E-Transfer</div><div class="stat-value">${{ "%.2f"|format(etransfer_sales) }}</div></div>
+</div>
+
+<div class="card" style="max-width:480px">
+  <h2>Cash Drawer Reconciliation</h2>
+  <form method="post" action="/cashup/close">
+    <div class="form-row">
+      <div class="form-group"><label>Opening Float ($)</label><input id="cu-float" name="open_float" type="number" step="0.01" value="{{ cash_float }}" oninput="recalc()"></div>
+      <div class="form-group"><label>Expected Cash in Drawer</label><input id="cu-expected" type="number" value="{{ expected }}" disabled style="opacity:.6"></div>
+    </div>
+    <div class="form-group">
+      <label>Actual Cash Counted ($)</label>
+      <input id="cu-actual" name="actual" type="number" step="0.01" placeholder="Count the drawer and enter here" required oninput="recalc()">
+    </div>
+    <div id="diff-display" style="display:none;padding:8px;border-radius:6px;margin-bottom:8px;font-size:13px"></div>
+    <div class="form-group"><label>Notes (optional)</label><textarea name="notes" rows="2" placeholder="Any discrepancy notes…"></textarea></div>
+    <button class="btn-primary" style="width:100%">🔒 Close &amp; Record Cash-Up</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Recent Cash-Up History</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Expected</th><th>Actual</th><th>Difference</th><th>Closed By</th></tr></thead>
+    <tbody>
+      {% for s in history %}
+      <tr>
+        <td>{{ s.date }}</td>
+        <td>${{ "%.2f"|format(s.expected) }}</td>
+        <td>${{ "%.2f"|format(s.actual) }}</td>
+        <td class="{{ 'text-green' if s.difference|abs < 0.01 else 'text-red' }}">{{ '%+.2f'|format(s.difference) }}</td>
+        <td class="text-muted">{{ s.closed_by_name }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-muted">No cash-ups recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+const CASH_SALES = {{ cash_sales }};
+function recalc(){
+  const float = parseFloat(document.getElementById('cu-float').value || 0);
+  const expected = float + CASH_SALES;
+  document.getElementById('cu-expected').value = expected.toFixed(2);
+  const actualField = document.getElementById('cu-actual').value;
+  const el = document.getElementById('diff-display');
+  if(actualField === ''){ el.style.display = 'none'; return; }
+  const actual = parseFloat(actualField || 0);
+  const diff = actual - expected;
+  el.style.display = 'block';
+  if(Math.abs(diff) < 0.01){
+    el.style.background = 'rgba(74,222,128,.15)'; el.style.color = '#4ade80';
+    el.textContent = '✓ Drawer matches exactly';
+  } else if(diff > 0){
+    el.style.background = 'rgba(251,191,36,.15)'; el.style.color = '#fbbf24';
+    el.textContent = `Drawer has $${diff.toFixed(2)} MORE than expected (overage)`;
+  } else {
+    el.style.background = 'rgba(248,113,113,.15)'; el.style.color = '#f87171';
+    el.textContent = `Drawer has $${Math.abs(diff).toFixed(2)} LESS than expected (shortage)`;
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Customers</h1>
+
+<div class="card">
+  <h2>Add Customer</h2>
+  <form method="post" action="/customers/add" class="form-row" style="align-items:flex-end">
+    <div class="form-group"><label>Name</label><input name="name" required></div>
+    <div class="form-group"><label>Phone</label><input name="phone"></div>
+    <div class="form-group"><label>Email</label><input name="email"></div>
+    <button class="btn-primary">Add</button>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Spent</th><th>Points</th><th>Store Credit</th><th></th></tr></thead>
+    <tbody>
+      {% for c in customers %}
+      <tr>
+        <td><a href="/customers/{{ c.id }}">{{ c.name }}</a></td>
+        <td>{{ c.phone }}</td>
+        <td>{{ c.email }}</td>
+        <td>${{ "%.2f"|format(c.spent) }}</td>
+        <td>{{ c.points }}</td>
+        <td class="text-green">${{ "%.2f"|format(c.store_credit) }}</td>
+        <td><a href="/customers/{{ c.id }}" class="btn-secondary btn-sm">Edit →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

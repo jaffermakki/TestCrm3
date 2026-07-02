@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block bare_content %}
+<div class="login-wrap">
+  <div class="login-box">
+    <div style="font-size:13px;color:var(--text2)">🔒 Staff Login</div>
+    <form method="post" action="/login" id="pin-form">
+      <input type="hidden" name="pin" id="pin-field">
+      <div class="pin-display" id="pin-display">____</div>
+      <div class="keypad" id="keypad" {% if locked %}style="opacity:.4;pointer-events:none"{% endif %}>
+        {% for n in [1,2,3,4,5,6,7,8,9] %}
+        <button type="button" onclick="press('{{n}}')">{{n}}</button>
+        {% endfor %}
+        <button type="button" onclick="press('clear')">⌫</button>
+        <button type="button" onclick="press('0')">0</button>
+        <button type="submit" class="btn-primary">Go</button>
+      </div>
+    </form>
+    <div class="error-text" id="error-text">
+      {% if locked %}Too many failed attempts. Try again in <span id="lock-secs">{{ lock_seconds }}</span>s.{% elif error %}{{ error }}{% endif %}
+    </div>
+  </div>
+</div>
+<script>
+let buf = '';
+function press(k){
+  if(k==='clear'){ buf = buf.slice(0,-1); }
+  else if(buf.length<4){ buf += k; }
+  document.getElementById('pin-display').textContent = buf.replace(/./g,'●').padEnd(4,'_');
+  document.getElementById('pin-field').value = buf;
+  if(buf.length===4) document.getElementById('pin-form').submit();
+}
+{% if locked %}
+let secsLeft = {{ lock_seconds }};
+const tick = ()=>{
+  secsLeft--;
+  const el = document.getElementById('lock-secs');
+  if(el) el.textContent = Math.max(0,secsLeft);
+  if(secsLeft<=0) location.reload();
+};
+setInterval(tick, 1000);
+{% endif %}
+</script>
+{% endblock %}

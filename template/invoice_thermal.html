@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Receipt {{ invoice.number }}</title>
+<style>
+  /* ── 80mm thermal receipt ──
+     80mm paper ≈ 302px printable width at 96dpi after standard margins.
+     To switch to 58mm paper, change --receipt-width below to 210px and
+     drop the base font-size to ~12px — everything else scales from these. */
+  :root { --receipt-width: 302px; }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', 'Consolas', monospace;
+    width: var(--receipt-width);
+    margin: 0 auto;
+    padding: 10px 8px;
+    color: #000;
+    background: #fff;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .bold { font-weight: 700; }
+  .logo { max-width: 70%; max-height: 60px; object-fit: contain; margin-bottom: 6px; }
+  .shop-name { font-size: 16px; font-weight: 700; letter-spacing: .5px; }
+  .shop-meta { font-size: 11px; color: #333; line-height: 1.6; margin-top: 2px; }
+  .hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
+  .hr-solid { border: none; border-top: 2px solid #000; margin: 8px 0; }
+  .row { display: flex; justify-content: space-between; gap: 6px; font-size: 12.5px; padding: 1px 0; }
+  .row.small { font-size: 11px; color: #333; }
+  .item-row { margin-bottom: 3px; }
+  .item-name { font-weight: 600; }
+  .item-line { display: flex; justify-content: space-between; font-size: 12px; color: #222; }
+  .total-row { display: flex; justify-content: space-between; font-size: 13px; padding: 2px 0; }
+  .grand-row { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; padding-top: 4px; }
+  .badge { display: inline-block; border: 1px solid #000; padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 3px; }
+  .footer-note { font-size: 11px; text-align: center; margin-top: 10px; line-height: 1.6; }
+  .no-print { text-align: center; margin-bottom: 14px; }
+  .no-print button { padding: 8px 18px; font-size: 14px; cursor: pointer; }
+
+  @media print {
+    .no-print { display: none !important; }
+    body { width: 100%; }
+    @page { margin: 0; size: 80mm auto; }
+  }
+</style>
+</head>
+<body>
+<div class="no-print">
+  <button onclick="window.print()">🖨️ Print Receipt</button>
+</div>
+
+<div class="center">
+  <img src="/static/logo.jpg" class="logo" alt="{{ shop.name }}"/>
+  <div class="shop-name">{{ shop.name }}</div>
+  <div class="shop-meta">
+    {% if shop.address %}{{ shop.address }}<br/>{% endif %}
+    {% if shop.phone %}{{ shop.phone }}{% endif %}{% if shop.phone and shop.email %} · {% endif %}{{ shop.email }}
+  </div>
+  {% if shop.gst %}<div class="shop-meta">GST/HST#: {{ shop.gst }}{% if shop.pst %} · PST: {{ shop.pst }}{% endif %}</div>{% endif %}
+</div>
+
+<hr class="hr-solid">
+
+<div class="row"><span class="bold">{{ invoice.number }}</span><span>{{ invoice.date.strftime('%Y-%m-%d %H:%M') }}</span></div>
+<div class="row small"><span>Customer:</span><span>{{ invoice.customer.name if invoice.customer else 'Walk-in' }}</span></div>
+{% if invoice.customer and invoice.customer.phone %}<div class="row small"><span>Phone:</span><span>{{ invoice.customer.phone }}</span></div>{% endif %}
+<div class="row small"><span>Staff:</span><span>{{ invoice.staff.name if invoice.staff else '—' }}</span></div>
+
+<hr class="hr">
+
+{% for l in invoice.lines %}
+<div class="item-row">
+  <div class="item-name">{{ l.name }}</div>
+  <div class="item-line">
+    <span>{{ l.qty }} x ${{ "%.2f"|format(l.price) }}{% if l.sku %} <span style="color:#666">({{ l.sku }})</span>{% endif %}</span>
+    <span class="bold">${{ "%.2f"|format(l.price * l.qty) }}</span>
+  </div>
+</div>
+{% endfor %}
+
+<hr class="hr">
+
+<div class="total-row"><span>Subtotal</span><span>${{ "%.2f"|format(invoice.subtotal) }}</span></div>
+{% if invoice.discount>0 %}<div class="total-row"><span>Discount</span><span>-${{ "%.2f"|format(invoice.discount) }}</span></div>{% endif %}
+{% if invoice.loyalty_pts_used>0 %}<div class="total-row"><span>Pts Redeemed</span><span>{{ invoice.loyalty_pts_used }} pts</span></div>{% endif %}
+{% if invoice.store_credit_used>0 %}<div class="total-row"><span>Credit Used</span><span>-${{ "%.2f"|format(invoice.store_credit_used) }}</span></div>{% endif %}
+{% for tl in tax_lines %}<div class="total-row"><span>{{ tl.label }}</span><span>${{ "%.2f"|format(tl.amount) }}</span></div>{% endfor %}
+
+<hr class="hr-solid">
+
+<div class="grand-row"><span>TOTAL</span><span>${{ "%.2f"|format(invoice.total) }}</span></div>
+
+<div class="row" style="margin-top:6px"><span>Payment</span><span class="bold">{{ invoice.payment_method }}</span></div>
+{% if invoice.tendered>0 %}
+<div class="total-row"><span>Tendered</span><span>${{ "%.2f"|format(invoice.tendered) }}</span></div>
+<div class="total-row"><span>Change</span><span>${{ "%.2f"|format(invoice.change_given) }}</span></div>
+{% endif %}
+
+{% if invoice.refunded %}
+<div class="center" style="margin-top:8px"><span class="badge">REFUNDED</span></div>
+{% endif %}
+
+<div class="footer-note">
+  Thank you for choosing {{ shop.name }}!<br/>
+  ────────────────<br/>
+  Keep this receipt for warranty/returns
+</div>
+</body>
+</html>

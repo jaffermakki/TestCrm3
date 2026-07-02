@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>SMTP Email Diagnostics</h1>
+
+<div class="card" style="max-width:560px">
+  <h2>Step-by-step connection test</h2>
+  <p class="text-muted" style="font-size:12px">Runs each phase of the SMTP connection separately so you can see exactly where it fails, instead of a vague "didn't arrive" message.</p>
+  <form method="post" action="/settings/smtp-diagnose" style="display:flex;gap:8px;margin-top:10px">
+    <input name="to_email" type="email" placeholder="Send test to this address" value="{{ to_email or '' }}" required style="flex:1">
+    <button class="btn-primary">Run Diagnostic</button>
+  </form>
+</div>
+
+{% if steps is not none %}
+<div class="card" style="max-width:560px">
+  <h2>Results</h2>
+  {% for status, label, detail in steps %}
+  <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:18px;flex-shrink:0">
+      {% if status=='ok' %}✅{% elif status=='fail' %}❌{% else %}⚠️{% endif %}
+    </span>
+    <div>
+      <div style="font-weight:700;font-size:13px">{{ label }}</div>
+      {% if detail %}<div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.6">{{ detail }}</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% set last = steps[-1] if steps else None %}
+{% if last and last[0] == 'ok' and 'accepted' in last[1]|lower %}
+<div class="card" style="max-width:560px;border-color:var(--green)">
+  <h2 class="text-green">All steps passed ✓</h2>
+  <p style="font-size:13px">The test message was accepted by your mail server.</p>
+  <ul style="font-size:13px;line-height:1.9;padding-left:18px">
+    <li>Check the inbox (and <strong>spam/junk folder</strong>) of the address you entered above.</li>
+    {% set is_brevo = settings.get('smtp_host','') and 'brevo' in settings.get('smtp_host','').lower() %}
+    {% if is_brevo %}
+    <li>If it's not there: <strong>the most likely cause is an unverified From address in Brevo</strong>. See the ⚠️ step above.</li>
+    <li>Brevo verified sender fix: <a href="https://app.brevo.com" target="_blank">app.brevo.com</a> → Senders &amp; IPs → Senders → Add a sender → verify it.</li>
+    <li>The From address you need to verify: <strong>{{ settings.get('smtp_from','') or settings.get('smtp_user','') }}</strong></li>
+    {% endif %}
+  </ul>
+</div>
+{% elif last and last[0] == 'fail' %}
+<div class="card" style="max-width:560px;border-color:var(--red)">
+  <h2 class="text-red">Stopped at: {{ last[1] }}</h2>
+  <p style="font-size:13px">Fix the issue shown above, save Settings, then run the diagnostic again.</p>
+</div>
+{% endif %}
+
+{% endif %}
+
+{% if settings.get('smtp_host','') and 'brevo' in settings.get('smtp_host','').lower() %}
+<div class="card" style="max-width:560px;border-color:#fbbf24">
+  <h2 style="color:#fbbf24">Brevo setup checklist</h2>
+  <ul style="font-size:13px;line-height:2;padding-left:18px">
+    <li>Host: <code>smtp-relay.brevo.com</code></li>
+    <li>Port: <code>587</code></li>
+    <li>Username: your Brevo SMTP login (looks like <code>xxxxx@smtp-brevo.com</code>)</li>
+    <li>Password: your <strong>SMTP Key</strong> — <em>not</em> your Brevo account password.
+      Find it at app.brevo.com → SMTP &amp; API → SMTP → Generate a new SMTP key</li>
+    <li>From Address: must match a <strong>verified sender</strong> in Brevo → Senders &amp; IPs → Senders</li>
+    <li>Currently configured From: <strong>{{ settings.get('smtp_from','') or settings.get('smtp_user','') }}</strong></li>
+  </ul>
+  <a href="https://app.brevo.com" target="_blank" class="btn-secondary btn-sm">Open Brevo Dashboard →</a>
+</div>
+{% endif %}
+
+<a href="/settings">&larr; Back to Settings</a>
+{% endblock %}

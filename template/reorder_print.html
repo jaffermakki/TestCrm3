@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>{{ shop_name }} — Reorder List</title>
+<style>
+  body { font-family: 'Inter', Arial, sans-serif; color: #2c2c2c; max-width: 800px; margin: 30px auto; padding: 0 20px; }
+  h1 { font-size: 20px; margin-bottom: 2px; color: #1e5c3a; }
+  .meta { font-size: 12px; color: #777; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12.5px; }
+  th { background: #1e5c3a; color: #fff; text-align: left; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; }
+  tr:nth-child(even) td { background: #f7f4ef; }
+  .checkbox-col { width: 24px; }
+  .total-box { background: #f0f5f1; border: 1px solid #c8dece; border-radius: 8px; padding: 14px; font-size: 15px; font-weight: 700; color: #1e5c3a; text-align: right; }
+  .no-print { margin-bottom: 16px; }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="no-print"><button onclick="window.print()" style="padding:8px 16px;font-size:14px;cursor:pointer">🖨️ Print</button></div>
+<h1>{{ shop_name }} — Reorder List</h1>
+<div class="meta">Generated {{ products|length }} item(s) needing reorder</div>
+<table>
+  <thead><tr><th class="checkbox-col"></th><th>SKU</th><th>Name</th><th>Brand</th><th>Current</th><th>Reorder Qty</th><th>Est. Cost</th></tr></thead>
+  <tbody>
+    {% for p in products %}
+    <tr>
+      <td class="checkbox-col">☐</td>
+      <td>{{ p.sku }}</td>
+      <td>{{ p.name }}</td>
+      <td>{{ p.subcategory or '—' }}</td>
+      <td>{{ p.stock }}</td>
+      <td>{{ p.reorder_qty }}</td>
+      <td>${{ "%.2f"|format(p.cost * p.reorder_qty) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">Nothing needs reordering.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="total-box">Estimated Total Cost: ${{ "%.2f"|format(total_cost) }}</div>
+</body>
+</html>
