@@ -1,0 +1,4 @@
+crm.db
+.session_secret
+__pycache__/
+*.pyc
